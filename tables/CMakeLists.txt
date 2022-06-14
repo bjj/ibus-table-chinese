@@ -30,6 +30,19 @@ IF(AWK_CMD STREQUAL "AWK_CMD-NOTFOUND")
     MESSAGE(FATAL_ERROR "awk or gawk is not found!")
 ENDIF(AWK_CMD STREQUAL "AWK_CMD-NOTFOUND")
 
+IF(ENABLE_TABLE_PREPROCESS)
+FIND_PROGRAM(FC_LIST fc-list)
+IF (FC_LIST STREQUAL "FC_LIST-NOTFOUND")
+    MESSAGE(FATAL_ERROR "fc-list (fontconfig) is not installed")
+ENDIF(FC_LIST STREQUAL "FC_LIST-NOTFOUND")
+execute_process(COMMAND ${FC_LIST} -f "%{file};" :lang=zh-cn:style=Regular:foundry=GOOG OUTPUT_VARIABLE SAMPLE_NOTO_FONTS)
+LIST(GET SAMPLE_NOTO_FONTS 0 SAMPLE_NOTO_FONT)
+
+SET(PREPROCESS_TABLE_CMD ${CMAKE_SOURCE_DIR}/tools/ibus-table-preprocess.py)
+SET(PREPROCESS_FONT ${SAMPLE_NOTO_FONT})
+SET(PREPROCESS_FREQ ${CMAKE_SOURCE_DIR}/tables/cantonese/cantonese.txt)
+ENDIF(ENABLE_TABLE_PREPROCESS)
+
 ################################################################
 # GENERATE_FREQ(outputFile inputFile)
 #
@@ -55,6 +68,19 @@ MACRO(MAKE_TABLE_SOURCE_TXT outputFile)
 	VERBATIM
 	)
 ENDMACRO(MAKE_TABLE_SOURCE_TXT outputFile)
+
+MACRO(PREPROCESS_TABLE outputExt)
+    FOREACH(_tabFile ${ARGN})
+	GET_FILENAME_COMPONENT(_tabName "${_tabFile}" NAME_WE)
+	SET(_outF "${_tabName}.${outputExt}")
+	ADD_CUSTOM_COMMAND(OUTPUT ${_outF}
+	    COMMAND ${PREPROCESS_TABLE_CMD} --output ${_outF} --source ${_tabFile}
+			--font ${PREPROCESS_FONT} --freq ${PREPROCESS_FREQ} --low-priority-char-threshold ${DEFAULT_FREQ}
+	    DEPENDS ${_tabFile}
+	    COMMENT "Preprocessing ${_tabName} table"
+	    )
+    ENDFOREACH(_tabFile ${ARGN})
+ENDMACRO(PREPROCESS_TABLE outputExt)
 
 ADD_CUSTOM_TARGET(convert_all ALL)
 

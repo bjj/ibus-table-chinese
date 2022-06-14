@@ -1,6 +1,7 @@
 *.tar.gz
 *.db
 *.freq
+*.out
 *.gmo
 *.la
 *.lo
